@@ -8,7 +8,7 @@ output:
 ---
 # Overview 
 
-We are given a text file, tournamentinfo.txt, which has a table of data from a chess tournament.  The data includes the 64 contestants' name, state they are from, total points scored, their pre-rating, and the results of the matches of who they played against.  I manually entered the data into a data frame, and then calculated the average pre-rating of the players each player played against.  I then saved the data frame in csv format as tournamentinfo.csv.
+We are given a text file, tournamentinfo.txt, which has a table of data from a chess tournament.  The data includes the 64 contestants' name, state they are from, total points scored, their pre-rating, and the results of the matches of who they played against.  I read the file into R using readLines, then extracted the names, states, points, and pre-ratings using regular expressions and stringr.  To calculate the opponent pre-rating average, I extracted a list of each player's opponents by number.  I then looped through the list, taking the mean of the opponents' pre-rating for each individual player.  I then saved the data frame in csv format as tournamentinfo.csv.
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -21,175 +21,82 @@ knitr::include_graphics('Excerpt.png')
 ```
 
 ```{r}
-chess = data.frame(Name = c('GARY HUA', 'DAKSHESH DARURI', 'ADITYA BAJAJ', 'PATRICK H SCHILLING', 'HANSHI ZUO', 'HANSEN SONG', 'GARY DEE SWATHELL', 'EZEKIEL HOUGHTON', 'STEFANO LEE', 'ANVIT RAO', 'CAMERON WILLIAM MC LEMAN', 'KENNETH J TACK', 'TORRANCE HENRY JR', 'BRADLEY SHAW', 'ZACHARY JAMES HOUGHTON', 'MIKE NIKITIN', 'RONALD GRZEGORCZYK', 'DAVID SUNDEEN', 'DIPANKAR ROY', 'JASON ZHENG', 'DINH DANG BUI', 'EUGENE L MCCLURE', 'ALAN BUI', 'MICHAEL R ALDRICH', 'LOREN SCHWIEBERT', 'MAX ZHU', 'GAURAV GIDWANI', 'SOFIA ADINA STANESCU-BELLU', 'CHIEDOZIE OKORIE', 'GEORGE AVERY JONES', 'RISHI SHETTY', 'JOSHUA PHILIP MATHEWS', 'JADE GE', 'MICHAEL JEFFERY THOMAS', 'JOSHUA DAVID LEE', 'SIDDHARTH JHA', 'AMIYATOSH PWNANANDAM', 'BRIAN LIU', 'JOEL R HENDON', 'FOREST ZHANG', 'KYLE WILLIAM MURPHY', 'JARED GE', 'ROBERT GLEN VASEY', 'JUSTIN D SCHILLING', 'DEREK YAN', 'JACOB ALEXANDER LAVALLEY', 'ERIC WRIGHT', 'DANIEL KHAIN', 'MICHAEL J MARTIN', 'SHIVAM JHA', 'TEJAS AYYAGARI', 'ETHAN GUO', 'JOSE C YBARRA', 'LARRY HODGE', 'ALEX KONG', 'MARISA RICCI', 'MICHAEL LU', 'VIRAJ MOHILE', 'SEAN M MC CORMICK', 'JULIA SHEN', 'JEZZEL FARKAS', 'ASHWIN BALAJI', 'THOMAS JOSEPH HOSMER', 'BEN LI'))
+text = readLines('tournamentinfo.txt')
+
+#Remove the Header
+text = text[5: 195]
+
+#Isolate lines from the text file containing the player names
+names_lines = text[seq(1, 192, 3)]
+
+pacman::p_load(stringr)
+
+names = str_extract_all(names_lines, "[A-Z]*[[:space:]]+[A-Z]*[[:space:]]*[A-Z]*[[:space:]]*[A-Z]+")
+names = unlist(names)
+names
 ```
 
 ```{r}
-chess$State = c('ON', 'MI', 'MI', 'MI', 'MI', 'OH', 'MI', 'MI', 'ON', 'MI',
-                'MI', 'MI', 'MI', 'MI', 'MI', 'MI', 'MI', 'MI', 'MI', 'MI',
-                'ON', 'MI', 'ON', 'MI', 'MI', 'ON', 'MI', 'MI', 'MI', 'ON',
-                'MI', 'ON', 'MI', 'MI', 'MI', 'MI', 'MI', 'MI', 'MI', 'MI',
-                'MI', 'MI', 'MI', 'MI', 'MI', 'MI', 'MI', 'MI', 'MI', 'MI',
-                'MI', 'MI', 'MI', 'MI', 'MI', 'MI', 'MI', 'MI', 'MI', 'MI',
-                'ON', 'MI', 'MI', 'MI')
-```
+names = tolower(names)
 
-```{r}
-chess$Total_Points = c(6.0, 6.0, 6.0, 5.5, 5.5, 5.0, 5.0, 5.0, 5.0, 5.0,
-                       4.5, 4.5, 4.5, 4.5, 4.5, 4.0, 4.0, 4.0, 4.0, 4.0,
-                       4.0, 4.0, 4.0, 4.0, 3.5, 3.5, 3.5, 3.5, 3.5, 3.5,
-                       3.5, 3.5, 3.5, 3.5, 3.5, 3.5, 3.5, 3.0, 3.0, 3.0,
-                       3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 2.5, 2.5, 2.5, 2.5,
-                       2.5, 2.5, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 1.5,
-                       1.5, 1.0, 1.0, 1.0)
-```
-
-```{r}
-chess$Pre_Rating = c(1794, 1553, 1384, 1716, 1655, 1686, 1649, 1641, 1411, 1365,
-                     1712, 1663, 1666, 1610, 1220, 1604, 1629, 1600, 1564, 1595,
-                     1563, 1555, 1363, 1229, 1745, 1579, 1552, 1507, 1602, 1522,
-                     1494, 1441, 1449, 1399, 1438, 1355, 980, 1423, 1436, 1348,
-                     1403, 1332, 1283, 1199, 1242, 377, 1362, 1382, 1291, 1056,
-                     1011, 935, 1393, 1270, 1186, 1153, 1092, 917, 853, 967,
-                     955, 1530, 1175, 1163)
-```
-
-```{r}
-#Function to calculate the average pre-rating of the opponents faced. Column 4 is pre-rating.
-
-calc_pre_rating_avg <- function(a, b, c, d, e, f, g){
-  mean(c(chess[a, 4], chess[b, 4], chess[c, 4], chess[d, 4], chess[e, 4], chess[f, 4], chess[g, 4]))
+simpleCap <- function(x) {
+  s <- strsplit(x, " ")[[1]]
+  paste(toupper(substring(s, 1,1)), substring(s, 2),
+      sep="", collapse=" ")
 }
+
+names = lapply(names, simpleCap)
+names = unlist(names)
+
+names
 ```
 
 ```{r}
-chess$Opponent_Pre_Rating_Avg[1] = calc_pre_rating_avg(39, 21, 18, 14, 7, 12, 4)
+chess = data.frame(Name = names)
+```
 
-chess$Opponent_Pre_Rating_Avg[2] = calc_pre_rating_avg(63, 58, 4, 17, 16, 20, 7)
+```{r}
+states_lines = text[seq(2, 192, 3)]
+states = str_extract_all(states_lines, "[A-Z]{2,}")
 
-chess$Opponent_Pre_Rating_Avg[3] = calc_pre_rating_avg(8, 61, 25, 21, 11, 13, 12)
+states = unlist(states)
+states
+```
 
-chess$Opponent_Pre_Rating_Avg[4] = calc_pre_rating_avg(23, 28, 2, 26, 5, 19, 1)
+```{r}
+chess$State = states
+```
 
-chess$Opponent_Pre_Rating_Avg[5] = calc_pre_rating_avg(45, 37, 12, 13, 4, 14, 17)
+```{r}
+names_lines
 
-chess$Opponent_Pre_Rating_Avg[6] = calc_pre_rating_avg(34, 29, 11, 35, 10, 27, 21)
+points = str_extract_all(names_lines, ".\\..")
+points = unlist(points)
+points
+```
 
-chess$Opponent_Pre_Rating_Avg[7] = calc_pre_rating_avg(57, 46, 13, 11, 1, 9, 2)
+```{r}
+chess$Total_Points = points
+```
 
-chess$Opponent_Pre_Rating_Avg[8] = calc_pre_rating_avg(3, 32, 14, 9, 47, 28, 19)
+```{r}
+pre_rating = str_extract_all(states_lines, "[[:space:]]{1}[0-9]{3,4}[[:space:]]{1}|[[:space:]]{1}[0-9]{3,4}P")
+pre_rating = unlist(pre_rating)
 
-chess$Opponent_Pre_Rating_Avg[9] = calc_pre_rating_avg(25, 18, 59, 8, 26, 7, 20)
+pre_rating = trimws(pre_rating)
+pre_rating = str_remove_all(pre_rating, "P")
 
-chess$Opponent_Pre_Rating_Avg[10] = calc_pre_rating_avg(16, 19, 55, 31, 6, 25, 18)
+pre_rating
+```
 
-chess$Opponent_Pre_Rating_Avg[11] = calc_pre_rating_avg(38, 56, 6, 7, 3, 34, 26)
+```{r}
+chess$Pre_Rating = pre_rating
+```
 
-chess$Opponent_Pre_Rating_Avg[12] = mean(c(chess[42, 4] , chess[33, 4] , chess[5, 4] , chess[38, 4] , chess[1, 4] , chess[3, 4]))
+```{r}
+chess$Opponent_Pre_Rating_Avg = 0
 
-chess$Opponent_Pre_Rating_Avg[13] = calc_pre_rating_avg(36, 27, 7, 5, 33, 3, 32)
-
-chess$Opponent_Pre_Rating_Avg[14] = calc_pre_rating_avg(54, 44, 8, 1, 27, 5, 31)
-
-chess$Opponent_Pre_Rating_Avg[15] = calc_pre_rating_avg(19, 16, 30, 22, 54, 33, 38)
-
-chess$Opponent_Pre_Rating_Avg[16] = mean(c(chess[10, 4] , chess[15, 4] , chess[39, 4] , chess[2, 4] , chess[36, 4]))
-
-chess$Opponent_Pre_Rating_Avg[17] = calc_pre_rating_avg(48, 41, 26, 2, 23, 22, 5)
-
-chess$Opponent_Pre_Rating_Avg[18] = calc_pre_rating_avg(47, 9, 1, 32, 19, 38, 10)
-
-chess$Opponent_Pre_Rating_Avg[19] = calc_pre_rating_avg(15, 10, 52, 28, 18, 4, 8)
-
-chess$Opponent_Pre_Rating_Avg[20] = calc_pre_rating_avg(40, 49, 23, 41, 28, 2, 9)
-
-chess$Opponent_Pre_Rating_Avg[21] = calc_pre_rating_avg(43, 1, 47, 3, 40, 39, 6)
-
-chess$Opponent_Pre_Rating_Avg[22] = mean(c(chess[64, 4] , chess[52, 4] , chess[28, 4] , chess[15, 4] , chess[17, 4] , chess[40, 4]))
-
-chess$Opponent_Pre_Rating_Avg[23] = calc_pre_rating_avg(4, 43, 20, 58, 17, 37, 46)
-
-chess$Opponent_Pre_Rating_Avg[24] = calc_pre_rating_avg(28, 47, 43, 25, 60, 44, 39)
-
-chess$Opponent_Pre_Rating_Avg[25] = calc_pre_rating_avg(9, 53, 3, 24, 34, 10, 47)
-
-chess$Opponent_Pre_Rating_Avg[26] = calc_pre_rating_avg(49, 40, 17, 4, 9, 32, 11)
-
-chess$Opponent_Pre_Rating_Avg[27] = mean(c(chess[51, 4] , chess[13, 4] , chess[46, 4] , chess[37, 4] , chess[14, 4] , chess[6, 4]))
-
-chess$Opponent_Pre_Rating_Avg[28] = calc_pre_rating_avg(24, 4, 22, 19, 20, 8, 36)
-
-chess$Opponent_Pre_Rating_Avg[29] = mean(c(chess[50, 4] , chess[6, 4] , chess[38, 4] , chess[34, 4] , chess[52, 4] , chess[48, 4]))
-
-chess$Opponent_Pre_Rating_Avg[30] = calc_pre_rating_avg(52, 64, 15, 55, 31, 61, 50)
-
-chess$Opponent_Pre_Rating_Avg[31] = calc_pre_rating_avg(58, 55, 64, 10, 30, 50, 14)
-
-chess$Opponent_Pre_Rating_Avg[32] = calc_pre_rating_avg(61, 8, 44, 18, 51, 26, 13)
-
-chess$Opponent_Pre_Rating_Avg[33] = calc_pre_rating_avg(60, 12, 50, 36, 13, 15, 51)
-
-chess$Opponent_Pre_Rating_Avg[34] = calc_pre_rating_avg(6, 60, 37, 29, 25, 11, 52)
-
-chess$Opponent_Pre_Rating_Avg[35] = calc_pre_rating_avg(46, 38, 56, 6, 57, 52, 48)
-
-chess$Opponent_Pre_Rating_Avg[36] = mean(c(chess[13, 4] , chess[57, 4] , chess[51, 4] , chess[33, 4] , chess[16, 4] , chess[28, 4]))
-
-chess$Opponent_Pre_Rating_Avg[37] = mean(chess[5, 4] , chess[34, 4] , chess[27, 4] , chess[23, 4] , chess[61, 4])
-
-chess$Opponent_Pre_Rating_Avg[38] = mean(c(chess[11, 4] , chess[35, 4] , chess[29, 4] , chess[12, 4] , chess[18, 4] , chess[15, 4]))
-
-chess$Opponent_Pre_Rating_Avg[39] = calc_pre_rating_avg(1, 54, 40, 16, 44, 21, 24)
-
-chess$Opponent_Pre_Rating_Avg[40] = calc_pre_rating_avg(20, 26, 39, 59, 21, 56, 22)
-
-chess$Opponent_Pre_Rating_Avg[41] = mean(c(chess[59, 4] , chess[17, 4] , chess[58, 4] , chess[20, 4]))
-
-chess$Opponent_Pre_Rating_Avg[42] = calc_pre_rating_avg(12, 50, 57, 60, 61, 64, 56)
-
-chess$Opponent_Pre_Rating_Avg[43] = calc_pre_rating_avg(21, 23, 24, 63, 59, 46, 55)
-
-chess$Opponent_Pre_Rating_Avg[44] = mean(c(chess[14, 4] , chess[32, 4] , chess[53, 4] , chess[39, 4] , chess[24, 4] , chess[59, 4]))
-
-chess$Opponent_Pre_Rating_Avg[45] = calc_pre_rating_avg(5, 51, 60, 56, 63, 55, 58)
-
-chess$Opponent_Pre_Rating_Avg[46] = calc_pre_rating_avg(35, 7, 27, 50, 64, 43, 23)
-
-chess$Opponent_Pre_Rating_Avg[47] = calc_pre_rating_avg(18, 24, 21, 61, 8, 51, 25)
-
-chess$Opponent_Pre_Rating_Avg[48] = mean(c(chess[17, 4] , chess[63, 4] , chess[52, 4] , chess[29, 4] , chess[35, 4]))
-
-chess$Opponent_Pre_Rating_Avg[49] = mean(c(chess[26, 4] , chess[20, 4] , chess[63, 4] , chess[64, 4] , chess[58, 4]))
-
-chess$Opponent_Pre_Rating_Avg[50] = mean(c(chess[29, 4] , chess[42, 4] , chess[33, 4] , chess[46, 4] , chess[31, 4] , chess[30, 4]))
-
-chess$Opponent_Pre_Rating_Avg[51] = calc_pre_rating_avg(27, 45, 36, 57, 32, 47, 33)
-
-chess$Opponent_Pre_Rating_Avg[52] = calc_pre_rating_avg(30, 22, 19, 48, 29, 35, 34)
-
-chess$Opponent_Pre_Rating_Avg[53] = mean(c(chess[25, 4] , chess[44, 4] , chess[57, 4]))
-
-chess$Opponent_Pre_Rating_Avg[54] = mean(c(chess[14, 4] , chess[39, 4] , chess[61, 4] , chess[15, 4] , chess[59, 4] , chess[64, 4]))
-
-chess$Opponent_Pre_Rating_Avg[55] = mean(c(chess[62, 4] , chess[31, 4] , chess[10, 4] , chess[30, 4] , chess[45, 4] , chess[43, 4]))
-
-chess$Opponent_Pre_Rating_Avg[56] = mean(c(chess[11, 4] , chess[35, 4] , chess[45, 4] , chess[40, 4] , chess[42, 4]))
-
-chess$Opponent_Pre_Rating_Avg[57] = mean(c(chess[7, 4] , chess[36, 4] , chess[42, 4] , chess[51, 4] , chess[35, 4] , chess[53, 4]))
-
-chess$Opponent_Pre_Rating_Avg[58] = mean(c(chess[31, 4] , chess[2, 4] , chess[41, 4] , chess[23, 4] , chess[49, 4] , chess[45, 4]))
-
-chess$Opponent_Pre_Rating_Avg[59] = mean(c(chess[41, 4] , chess[9, 4] , chess[40, 4] , chess[43, 4] , chess[54, 4] , chess[44, 4]))
-
-chess$Opponent_Pre_Rating_Avg[60] = mean(c(chess[33, 4] , chess[34, 4] , chess[45, 4] , chess[42, 4] , chess[24, 4]))
-
-chess$Opponent_Pre_Rating_Avg[61] = calc_pre_rating_avg(32, 3, 54, 47, 42, 30, 37)
-
-chess$Opponent_Pre_Rating_Avg[62] = chess[55, 4]
-
-chess$Opponent_Pre_Rating_Avg[63] = mean(c(chess[2, 4] , chess[48, 4] , chess[49, 4] , chess[43, 4] , chess[45, 4]))
-
-chess$Opponent_Pre_Rating_Avg[64] = calc_pre_rating_avg(22, 30, 31, 49, 46, 42, 54)
+head(chess)
 ```
 
 ```{r}
@@ -198,7 +105,41 @@ pacman::p_load(dplyr, tidyr, magrittr)
 
 ```{r}
 chess %<>%
-  mutate(Opponent_Pre_Rating_Avg = round(Opponent_Pre_Rating_Avg))
+  mutate(State = factor(State)) %>%
+  mutate(Total_Points = as.double(Total_Points)) %>%
+  mutate(Pre_Rating = as.double(Pre_Rating))
+
+head(chess)
+```
+
+```{r}
+opponents = str_extract_all(names_lines, "W[[:space:]]+[0-9]+|D[[:space:]]+[0-9]+|L[[:space:]]+[0-9]+")
+opponents
+```
+
+```{r}
+opponents = str_extract_all(opponents, "[[:space:]]{1}[0-9]+")
+```
+
+```{r}
+opponents = lapply(opponents, trimws)
+opponents = lapply(opponents, as.numeric)
+```
+
+```{r}
+opponents
+```
+
+```{r}
+for (i in 1:length(opponents)){
+  x = 0
+  for (c in opponents[i][1]){
+    x = x + chess$Pre_Rating[c]
+  }
+  chess$Opponent_Pre_Rating_Avg[i] = mean(x)
+}
+
+chess$Opponent_Pre_Rating_Avg = round(chess$Opponent_Pre_Rating_Avg)
 ```
 
 ```{r}
