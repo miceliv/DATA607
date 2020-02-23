@@ -40,9 +40,20 @@ Into a format like this:
 c("bell pepper", "bilberry", "blackberry", "blood orange", "blueberry", "cantaloupe", "chili pepper", "cloudberry", "elderberry", "lime", "lychee", "mulberry", "olive", "salal berry")
 
 ```{r}
-m1 <- matrix(data = c("bell pepper", "bilberry", "blackberry", "blood orange", "blueberry", "cantaloupe", "chili pepper", "cloudberry", "elderberry", "lime", "lychee", "mulberry", "olive", "salal berry"))
+pacman::p_load(stringr)
 
-as.vector(m1)
+data <- '[1] "bell pepper"  "bilberry"     "blackberry"   "blood orange"
+
+[5] "blueberry"    "cantaloupe"   "chili pepper" "cloudberry"  
+
+[9] "elderberry"   "lime"         "lychee"       "mulberry"    
+
+[13] "olive"        "salal berry"'
+
+data <- str_extract_all(data, "(.+?)+")
+data <- unlist(data)
+
+data
 ```
 
 
@@ -52,36 +63,36 @@ The two exercises below are taken from R for Data Science, 14.3.5.1 in the on-li
 
 (.)\1\1
 
-This matches a character followed by \1\1
+This matches a character followed by the characters "\1\1", such as "h\1\1".  It is not backreferenced.
 
 "(.)(.)\\2\\1"
 
-This matches a string starting with any character followed by a character, followed by the second character, then the first character
+This matches substrings starting with any character followed by a character, followed by the second character, then the first character, such as anna or otto.
 
 (..)\1
 
-This matches any two characters followed by \1
+This matches any two characters followed by "\1", such as "hi\1".  It is not backreferenced.
 
 "(.).\\1.\\1"
 
-This matches strings starting with any 2 characters followed by the first character, then any character, then the first character again
+This matches substrings starting with any 2 characters followed by the first character, then any character, then the first character again, such as "papop".
 
 "(.)(.)(.).*\\3\\2\\1"
 
-This matches strings starting with 4 or more characters, followed by the 3rd, 2nd, and 1st character in that order
+This matches strings starting with 4 or more characters, followed by the 3rd, 2nd, and 1st character in that order, such as "moooooooooom".
 
 
 #4 Construct regular expressions to match words that:
 
 Start and end with the same character.
 
-(.).*\\1
+"(.).*\\1"
 
 Contain a repeated pair of letters (e.g. "church" contains "ch" repeated twice.)
 
-.*(..).*\\1.*
+".*(..).*\\1.*"
 
 Contain one letter repeated in at least three places (e.g. "eleven" contains three "e"s.)
 
-.*(.).*\\1.*\\1.*
+".*(.).*\\1.*\\1.*"
 
