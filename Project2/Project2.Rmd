@@ -1,0 +1,211 @@
+---
+title: "Project 2"
+author: "Vincent Miceli"
+date: "3/7/2020"
+output: html_document
+---
+
+## Overview
+
+For this project, I chose 3 of the example untidy datasets suggested by other students.  I then converted them to csv files as necessary, and loaded them into RStudio.  Finally, I performed the suggested analyses on the datasets.
+
+```{r}
+pacman::p_load(dplyr, tidyr, magrittr, stringr, ggplot2)
+
+wide_data <- read.csv('gender_education.csv')
+wide_data
+```
+
+This is a data frame of highest educational attainment of males and females by region.  To tidy the data, I will group the various columns of gender/education combinations into one column, Gender_Education.
+
+```{r}
+ge_data <- gather(wide_data, 'Gender_Education', 'Count', 2:11)
+head(ge_data)
+```
+
+I will further organize the data by splitting Gender_Education into two separate columns, Gender and Education, using substring detection.
+
+```{r}
+ge_data %<>%
+  mutate(Gender = ifelse(grepl("Fem", Gender_Education), "Female", "Male")) %>%
+  mutate(Education = str_remove_all(Gender_Education, "Female_")) %>%
+  mutate(Education = str_remove_all(Education, "Male_")) %>%
+  select(-Gender_Education)
+
+ge_data <- ge_data[c(1,3,4,2)]
+head(ge_data)
+```
+
+The analysis required for this dataset is to find which region has the highest proportion of people with High School as their highest educational attainment.  There were other analyses suggested involving average income, but that will not be possible with the given data.  To do this, I will seperate the data frame into 4 separate data frames by region, and calculate the entire total and the total who only completed High School for each region.
+
+```{r}
+NE <- ge_data %>%
+  filter(Region == 'Northeast Region')
+
+NEtotal <- sum(NE$Count)
+NEhs <- sum(NE$Count[NE$Education == 'HS'])
+
+MW <- ge_data %>%
+  filter(Region == 'Midwest Region')
+
+MWtotal <- sum(MW$Count)
+MWhs <- sum(MW$Count[MW$Education == 'HS'])
+
+S <- ge_data %>%
+  filter(Region == 'South Region')
+
+Stotal <- sum(S$Count)
+Shs <- sum(S$Count[S$Education == 'HS'])
+
+W <- ge_data %>%
+  filter(Region == 'West Region')
+
+Wtotal <- sum(W$Count)
+Whs <- sum(W$Count[W$Education == 'HS'])
+```
+
+```{r}
+NE_HSmost <- NEhs / NEtotal
+MW_HSmost <- MWhs / MWtotal
+S_HSmost <- Shs / Stotal
+W_HSmost <- Whs / Wtotal
+
+regions_hs <- c(NE_HSmost, MW_HSmost, S_HSmost, W_HSmost)
+
+cat("The proportion of people in the Northeast with the highest educational attainment of High School is", NE_HSmost, "\nThe proportion of people in the Midwest with the highest educational attainment of High School is", MW_HSmost, "\nThe proportion of people in the South  with the highest educational attainment of High School is", S_HSmost, "\nThe proportion of people in the West with the highest educational attainment of High School is", W_HSmost, "\n\nThe highest proportion is", max(regions_hs), "which is from the Midwest region.")
+```
+
+
+
+```{r}
+wide_data <- read.csv('time_series_19-covid-Confirmed.csv')
+head(wide_data)
+```
+
+This is a data set of confirmed coronavirus cases in various regions, between the January 22nd and March 6th.  I will start tidying this data by changing the name of the date columns to numbers, representing day 1 of the collection until day 45.
+
+```{r}
+wide_data %<>%
+  rename("Province" = Province.State, "Country" = Country.Region, "1" = X1.22.20, "2" = X1.23.20, "3" = X1.24.20, "4" = X1.25.20, "5" = X1.26.20, "6" = X1.27.20, "7" = X1.28.20, "8" = X1.29.20, "9" = X1.30.20, "10" = X1.31.20, "11" = X2.1.20, "12" = X2.2.20, "13" = X2.3.20, "14" = X2.4.20, "15" = X2.5.20, "16" = X2.6.20, "17" = X2.7.20, "18" = X2.8.20, "19" = X2.9.20, "20" = X2.10.20, "21" = X2.11.20, "22" = X2.12.20, "23" = X2.13.20, "24" = X2.14.20, "25" = X2.15.20, "26" = X2.16.20, "27" = X2.17.20, "28" = X2.18.20, "29" = X2.19.20, "30" = X2.20.20, "31" = X2.21.20, "32" = X2.22.20, "33" = X2.23.20, "34" = X2.24.20, "35" = X2.25.20, "36" = X2.26.20, "37" = X2.27.20, "38" = X2.28.20, "39" = X2.29.20, "40" = X3.1.20, "41" = X3.2.20, "42" = X3.3.20, "43" = X3.4.20, "44" = X3.5.20, "45" = X3.6.20)
+
+head(wide_data)
+```
+
+I can now group the original dates, now represented as days of collection, into a single column, Day.
+
+```{r}
+cv_data <- gather(wide_data, 'Day', 'Infections', 5:49)
+
+cv_data %<>% mutate(Day = as.integer(Day))
+head(cv_data)
+```
+
+The insights from this data that we are looking for are:
+How the number of affected cases are getting changed over time?
+Describe cases over time at country level.
+What is the latest number of cases?
+
+To find the change over time, we first need to find the total infections by day.
+
+```{r}
+day_count <- rep(NA, 45)
+
+for(i in 1:45){
+  day_count[i] = sum(cv_data$Infections[cv_data$Day == i])
+}
+
+plot(1:45, day_count, xlab = 'Day', ylab = 'Confirmed Infections')
+```
+
+In this plot, the change over time of infections appears linear, but this is misleading if you are trying to understand how rapidly the virus spreads.  This plot included all countries in the data frame, which may or may not have already been exposed to the virus yet on a given day.  A huge majority of the infections are also coming from China alone.  It would be more effective to make plots for individual countries.
+
+The following loop will plot the infections over time for each individual country in the dataset, given that the country has at least 20 infections.
+
+```{r}
+day_count <- rep(NA, 45)
+countries = unique(cv_data$Country)
+
+for (c in 1:length(countries)){
+  d <- cv_data %>%
+    filter(Country == countries[c])
+  if(max(d$Infections) < 20){
+    next
+  }
+  for(i in 1:45){
+    day_count[i] = sum(d$Infections[d$Day == i])
+  }
+  plot(1:45, day_count, xlab = 'Day', ylab = 'Confirmed Infections', main = countries[c])
+}
+```
+
+Most of the countries seem to have exponential growth in infections over time, while a few such as Thailand and Taiwan appear to have linear growth.
+
+```{r}
+current_infections <- sum(cv_data$Infections[cv_data$Day == 45])
+
+cat("The latest count of confirmed infections is:", current_infections)
+```
+
+
+
+```{r}
+wide <- read.csv('studentloans.csv')
+wide
+```
+
+This is a data frame of proportions of loan holders of various amounts by race.  I will start tidying the data by transforming the percentages into numeric values.
+
+```{r}
+wide %<>%
+  rename(Black = Black_or_African_American, Hispanic = Hispanic_or_Latino) %>%
+  mutate(White = str_remove_all(White, "%")) %>%
+  mutate(Black = str_remove_all(Black, "%")) %>%
+  mutate(Hispanic = str_remove_all(Hispanic, "%")) %>%
+  mutate(Asian = str_remove_all(Asian, "%")) %>%
+  mutate(Other = str_remove_all(Other, "%")) %>%
+  mutate(White = as.numeric(White)) %>%
+  mutate(Black = as.numeric(Black)) %>%
+  mutate(Hispanic = as.numeric(Hispanic)) %>%
+  mutate(Asian = as.numeric(Asian)) %>%
+  mutate(Other = as.numeric(Other))
+
+wide
+```
+
+The values are percentages, so we need to divide these values by 100.
+
+```{r}
+wide %<>%
+  mutate(White = White / 100) %>%
+  mutate(Black = Black / 100) %>%
+  mutate(Hispanic = Hispanic / 100) %>%
+  mutate(Asian = Asian / 100) %>%
+  mutate(Other = Other / 100) 
+
+wide
+```
+
+We can now transform the data from wide to long by grouping the race columns into one column, race.
+
+```{r}
+sl <- gather(wide, 'Race', 'Proportion', 2:6)
+head(sl)
+```
+
+The analysis suggested for this dataset would require outside data, so I will use the data to find which races have to highest and lowest proportions of loans for each value range.
+
+Holders of highest proportion of each amount borrowed range:
+```{r}
+sl %>%
+  group_by(Amount.Borrowed) %>%
+  filter(Proportion == max(Proportion))
+```
+
+Holders of lowest proportion of each amount borrowed range:
+```{r}
+sl %>%
+  group_by(Amount.Borrowed) %>%
+  filter(Proportion == min(Proportion))
+```
+
+The races Asian and Other are tied for the lowest proportion of loans at the range of $60,000+
