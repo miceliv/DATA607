@@ -1,0 +1,20 @@
+<books>
+  <row>
+    <Title>Finding the Winning Edge</Title>
+    <Author>Bill Walsh</Author>
+    <Year>1997</Year>
+    <Genre>Biography</Genre>
+  </row>
+  <row>
+    <Title>The Education of a Coach</Title>
+    <Author>David Halberstam</Author>
+    <Year>2005</Year>
+    <Genre>Biography</Genre>
+  </row>
+  <row>
+    <Title>The League</Title>
+    <Author>David Harris</Author>
+    <Year>1986</Year>
+    <Genre>Non-Fiction</Genre>
+  </row>
+</books>

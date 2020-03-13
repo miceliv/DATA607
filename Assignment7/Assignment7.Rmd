@@ -1,0 +1,40 @@
+---
+title: "Assignment 7"
+author: "Vincent Miceli"
+date: "3/13/2020"
+output: html_document
+---
+
+## Overview
+
+I created the same table in three different file types, html, json, and xml.  The table contains the Title, Author, Year, and Genre of three particular books.  I then loaded the individual files into R as data frames.
+
+```{r}
+pacman::p_load(XML, jsonlite)
+```
+
+
+```{r}
+books_html <- readHTMLTable('books.html')[[1]]
+books_html
+```
+
+```{r}
+books_json <- fromJSON('books.json')
+books_json
+```
+
+```{r}
+books_xml <- xmlToDataFrame('books.xml')
+books_xml
+```
+
+# Files
+
+<a href"file:///=C:\Users\micel\Documents\607\Assignment5\books.html">html file</a>
+<a href"file:///=C:\Users\micel\Documents\607\Assignment5\books.json">json file</a>
+<a href"file:///=C:\Users\micel\Documents\607\Assignment5\books.xml">xml file</a>
+
+## Conclusion
+
+All three of the data frames are identical.  Since I created them by hand with the same exact structure, it makes sense that they are identical.
