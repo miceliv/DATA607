@@ -1,0 +1,42 @@
+---
+title: "Assignment 9"
+author: "Vincent Miceli"
+date: "3/27/2020"
+output: html_document
+---
+# Introduction
+
+Using the NY Times Article Search API, I created a function to add the api key and search word into the get request, then convert the JSON data into a dataframe.  The output is a dataframe of 10 articles related to the search input.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+pacman::p_load(tidyverse, httr, jsonlite)
+```
+
+```{r}
+key <- 'XIj83va0oMUJxiHFGHRNN4pxGUYjQBhu'
+path <- 'https://api.nytimes.com/svc/search/v2/articlesearch.json'
+```
+
+```{r}
+req <- function(path, key, topic){
+  path <- paste(path, '?', 'api-key=', key, '&q=', topic, sep = "")
+  request <- GET(url = path)
+  get_articles_text <- content(request, 'text')
+  get_articles_json <- fromJSON(get_articles_text, flatten = TRUE)
+  get_articles_json
+  return(data.frame(get_articles_json))
+}
+```
+
+```{r}
+articles <- req(path, key, 'coronavirus')
+```
+
+```{r}
+head(articles, 3)
+```
+
