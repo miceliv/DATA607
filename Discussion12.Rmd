@@ -1,0 +1,28 @@
+---
+title: "Discussion 12"
+author: "Vincent Miceli"
+date: "4/14/2020"
+output: html_document
+---
+
+# Youtube Recommendation System
+
+## Introduction
+
+Youtube was originally a website where anyone could upload videos and share it with the world.  That is still true today, but it has clearly expanded and evolved over time.  It now live-streams major events, has official music videos, streams movies, and generates a very high revenue off of advertisements. To maximize the viewing of these advertisements and maximize their revenue, Youtube makes use of recommender systems, targeted marketing of videos that would likely be interesting to individual viewers.
+
+## Reverse engineering
+
+As soon as you open Youtube, the first thing you see is the Recommended heading. Under that is a variety of videos/songs that are very similar to things I have recently watched, but not the exact same videos.  People are unlikely to watch the exact same thing again, but they are likely to watch something that's generally similar to what they previously watched if it is an interest of theirs.  For example, a football fan who watched a few football videos is likely to see his recommendations full of football content.  If this person is very passionate about football as he's shown so far, he is very likely to watch these videos, and Youtube's plan worked.
+
+The algorithm does not just recommend videos with similar topics though, it is highly influenced by the number of likes and views on the video.  Highly viewed and highly liked videos are much more likely to be enjoyed by the viewer since so many other people already confirmed that they enjoyed it.  However, Youtube noticed that users like fresh content, and it takes time for a video to gain a high number of views, so that is also taken into account.
+
+## Scenario Design
+
+* **Target Users**: The targeted users is almost the entire world.  Youtube now has 1.8 Billion users, nearly 25 percent of the world population. Through their recommender system they are able to tailor suggested videos to every individual user.  
+* **Key Goals**: Their key goal is to have their videos that have advertisements to be watched as many times as possible.  Content creators keep 55 percent of ad revenue for their videos, and youtube takes 45 percent.  The more ad revenue generated, the more money Youtube makes. 
+* **My Suggestions**: Youtube clearly already has a very good recommendation system that has been very successful for them.  People already also have some control over the content that is recommended to them, based on which videos they like and which users they subscribe to.  If there is any suggestion I would make, it would be to give users even more control, such as by adding an interests page where users could select likes and dislikes out of a large list of topics.
+
+https://www.businessinsider.com/youtube-user-statistics-2018-5
+https://www.investopedia.com/articles/personal-finance/032615/how-youtube-ad-revenue-works.asp
+https://www.theatlantic.com/technology/archive/2018/11/how-youtubes-algorithm-really-works/575212/
