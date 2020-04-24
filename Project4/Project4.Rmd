@@ -1,0 +1,112 @@
+---
+title: "Project 4"
+author: "Vincent Miceli"
+date: "4/22/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introducion
+
+In this project we will build a text classifier to identify spam messages using a Naive Bayes classifier.  Individual AMSCII files will be used to build the datasets of "spam" and "ham" to train the model.
+
+```{r}
+pacman::p_load(tidyverse, readr, tidyr, dplyr, magrittr, quanteda, tm, caret, e1071, caTools, randomForest)
+```
+
+Load in the path to the ham and spam files from the local folders on the machine
+
+```{r}
+ham_files <- list.files(path = "C:/Users/micel/Documents/607/Project4/easy_ham", full.names = T)
+spam_files <- list.files(path = "C:/Users/micel/Documents/607/Project4/spam_2", full.names = T)
+```
+
+Read in the spam files one by one and combine them into a dataframe, and create a new column Tag to identify spam vs ham
+
+```{r}
+spam <- data.frame(do.call(rbind, lapply(spam_files, read_file)))
+spam %<>%
+  rename("Text" = "do.call.rbind..lapply.spam_files..read_file..") %>%
+  mutate(Spam = 1)
+head(spam, 2)
+```
+
+Repeat for the ham files
+
+```{r}
+ham <- data.frame(do.call(rbind, lapply(ham_files, read_file)))
+ham %<>%
+  rename("Text" = "do.call.rbind..lapply.ham_files..read_file..") %>%
+  mutate(Spam = 0)
+head(ham, 2)
+```
+
+Combine the two dataframes of ham and spam into one dataframe called data
+
+```{r}
+data <- rbind(spam, ham)
+data %<>%
+  mutate(Text = as.character(Text))
+head(data, 2)
+```
+
+Create a corpus and document term matrix from the text in each file to be used for classification
+
+```{r}
+data$Text <- iconv(enc2utf8(data$Text),sub="byte")
+corpus <- VCorpus(VectorSource(data$Text))
+corpus = tm_map(corpus, tolower)
+corpus = tm_map(corpus, PlainTextDocument)
+corpus = tm_map(corpus, removePunctuation)
+corpus <- tm_map(corpus, removeWords, stopwords("english"))
+corpus <- tm_map(corpus, stemDocument)
+dtm = DocumentTermMatrix(corpus)
+```
+
+Removve sparse terms to obtain a more reasonable number of terms to work with for prediction
+
+```{r}
+spdtm = removeSparseTerms(dtm, 0.95)
+```
+
+Create a dataframe from the document term matrix
+
+```{r}
+emailsSparse = as.data.frame(as.matrix(spdtm))
+colnames(emailsSparse) = make.names(colnames(emailsSparse))
+```
+
+Copy the spam labelling from the original dataset to the emailsSparse dataframe
+
+```{r}
+emailsSparse$Spam = data$Spam
+```
+
+Now we split the dataframe into train and test sets
+
+```{r}
+set.seed(777)
+spl = sample.split(emailsSparse$spam, 0.8)
+train = subset(emailsSparse, spl == TRUE)
+test = subset(emailsSparse, spl == FALSE)
+```
+
+One model we can build is a logistic regression model for classification:
+
+```{r}
+spamLog = glm(Spam~., data=train, family="binomial")
+```
+## Accuracy
+
+```{r}
+pred = predict(spamLog, newdata = test, type="response")
+table(test$Spam, pred > 0.5)
+cat("The accuracy out of sample is:", (483+285)/nrow(test))
+```
+
+### Reference
+
+https://rpubs.com/anilcs13m/126170
