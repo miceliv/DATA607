@@ -1,0 +1,264 @@
+---
+title: "Final Project"
+author: "Vincent Miceli"
+output:
+  html_document:
+    df_print: paged
+---
+
+## Introduction
+
+The problem that countries all over the world are facing is COVID-19 and the struggle to contain it.  The question on everyone's minds is when will life begin to return to normal, if ever?  There is a theory that the coronavirus may spread less quickly in high temperatures, similar to the influenza virus, where infections peak in cold, winter temperatures.  This idea gives hope that the coming summer temperatures in areas like the Northeast United States could help to continue to bring the curve of new infections down.  Whether or not the coronavirus could become a seasonal virus is another issue, but any chance to bring new infections down in this current crisis would be a huge help towards life returning to some type of "new normal."  Another possibility to explore is whether the virus spreads differently according to geographic location (Latitude and Longitude).  We can investigate this by exploring if countries with higher average temperatures and different geographic locations had any significant difference in growth rate of infections.  
+
+```{r}
+pacman::p_load(dplyr, tidyr, magrittr, stringr, ggplot2, caTools, randomForest)
+```
+
+### Tidying/Preparing For Analysis
+
+This is a dataset is scraped from a wikipedia page using Pandas read_html function. It contains a table of average temperatures yearly by country.
+
+```{r}
+country_temps <- read.csv('avg_temps.csv')
+```
+
+```{r}
+tail(country_temps)
+colnames(country_temps) <- c('Country', 'Avg_Yearly_TempF')
+```
+
+Those characters were supposed to be a negative sign, so I will replace them with a "-" using the str_replace_all function from stringr.  I also converted this column to numeric and converted from Celsius to Fahrenheit.
+
+```{r}
+country_temps$Avg_Yearly_TempF <- str_replace_all(country_temps$Avg_Yearly_TempF, "â\\ˆ\\’", '-')  
+country_temps$Avg_Yearly_TempF <- as.numeric(country_temps$Avg_Yearly_TempF)
+country_temps$Avg_Yearly_TempF <- country_temps$Avg_Yearly_TempF * (9/5) + 32
+tail(country_temps)
+```
+
+This is a complete dataset of a total running count of confirmed coronavirus cases for each country, starting on January 2nd until May 8th.
+
+```{r}
+covid19 <- read.csv("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv")
+
+#This dataset is updated daily and will not work with the below code after May 8th unless the below code is adjusted.
+```
+
+```{r}
+head(covid19)
+```
+
+```{r}
+covid19 %<>% 
+  rename('Country' = 'Country.Region')
+```
+
+To tidy the data, I will create a vector of numbers between 1 to 108, representing the number of days that the dataset covers and will use this to replace the date columns. This will help in transforming the dataset from wide to long.
+
+```{r}
+days <- 1:108
+cols <- c('Province', 'Country', 'Lat', 'Long', days)
+colnames(covid19) <- cols
+```
+
+```{r}
+covid19 <- gather(covid19, 'Day', 'Confirmed_Cases', 5:112)
+head(covid19)
+```
+
+The original dataset has multiple rows for countries with provinces.  I will take the sum of the infections for all of the provinces of these countries and combine it into one row, that way there is one row for each country.
+
+```{r}
+bycountry_cases <- covid19 %>%
+  mutate(Day = as.integer(Day)) %>%
+  group_by(Country, Day) %>%
+  arrange(Day) %>%
+  select(Confirmed_Cases) %>%
+  summarise_each(sum)
+```
+
+I will also take the mean Latitude and Longitude of all the provinces for each country, and use that to estimate the country's Latitude and Longitude.
+
+```{r}
+bycountry_loc <- covid19 %>%
+  group_by(Country) %>%
+  select(Lat, Long) %>%
+  summarise_each(mean)
+```
+
+We can now merge the two dataframes with one row per country, then merge that dataframe with the average temperature in Fahrenheit from the wikipedia temperature dataset.
+
+```{r}
+covid19 <- merge(bycountry_cases, bycountry_loc, by = 'Country')
+covid19 <- merge(country_temps, covid19, by = 'Country')
+```
+
+```{r}
+covid19 %<>% arrange(Day)
+head(covid19)
+```
+
+We now have a dataset with each row representing a day for a country, showing their average yearly temperature, their cumulative number of confirmed cases, and their geographic location measured by Latitude and Longitude.  We can now begin to analyze the data.
+
+### Analysis
+
+```{r}
+ten <- covid19 %>%
+  filter(Confirmed_Cases >= 10 & Confirmed_Cases <=20) %>%
+  arrange(Country, Day) %>%
+  group_by(Country) %>%
+  mutate(Start_Cases = min(Confirmed_Cases)) %>%
+  mutate(Start_Day = min(Day)) %>%
+  mutate(Days = 108 - Start_Day) %>%
+  distinct(Country, .keep_all = TRUE)
+head(ten)
+```
+
+In this dataframe, I located the first day that each country reached a number of confirmed cases between 10 and 20.  This is a good starting point for the analysis, because that is a sufficient number of cases for the virus to start to spread more rapidly, and in this way all countries will be starting at nearly the same number of cases.  We also mark exactly how many cases they had on that day. The 'Days' column marks the number of days that have passed since the country reached 10-20 cases.  We need this column because we want to compare the growth rates across roughly the same period of time.
+
+```{r}
+current <- covid19 %>%
+  filter(Day == 108) %>%
+  select(Country, Confirmed_Cases) %>%
+  rename('Current_Cases' = 'Confirmed_Cases') %>%
+  mutate(Current_Day = 108)
+```
+
+Here, I am making a column of the number of total cases as of now, day 108. We can then merge these two dataframes and have data that is much more useful for finding the growth rate.  We have the day the country reached roughly 10 cases, the day they reached their current number of cases, and the current number of cases.  We no longer need the original columns 'Day' and 'Confirmed_Cases.'
+
+```{r}
+covid19 <- merge(ten, current, by = 'Country')
+covid19 %<>%
+  select(-c(Day, Confirmed_Cases))
+head(covid19)
+```
+
+```{r}
+table(covid19$Days)
+```
+
+There are quite a few countries that have only had 10-20 cases forr less than 35 days.  I will start by using 35 days as a cut off and only compare growth rates for countries that have had over 10 cases for at least 35 days so that it will give a more fair comparison because growth rates change as the number of cases increase.
+
+```{r}
+covid19 %<>%
+  filter(Days >= 35)
+table(covid19$Current_Cases)
+```
+
+There are still too many countries in the data set with a very low number of total confirmed cases.  I will increase the 'Days' filter to 55 and above. 
+
+```{r}
+covid19 %<>%
+  filter(Days >= 55)
+table(covid19$Current_Cases)
+```
+
+There are now 78 countries left in the dataset.  Although I do not want to have to remove a significant amount of data from from the dataset, I should also remove countries that had a very early 'Start_Day' of reaching at least 10 confirmed cases, for the same reason that we should be comparing over a similar time frame.
+
+```{r}
+table(covid19$Start_Day)
+```
+
+I will remove the countries with a 'Start_Day' below 19.
+
+```{r}
+covid19 %<>%
+  filter(Start_Day > 18) %>%
+  select(-c(Current_Day, Start_Day))
+```
+
+I will now make a new column 'Avg_Growth_Rate,' The average percent increase in cases per day over the course of this time frame.
+
+```{r}
+covid19 %<>%
+  mutate(Avg_Growth_Rate = round(((Current_Cases - Start_Cases) / Start_Cases / Days) * 100, digits = 2))
+```
+
+Avg_Growth_Rate is our target variable.  We can now use our features 'Lat,' 'Long,' and 'Avg_Yearly_TempF' to explore if there is any correlation to the 'Avg_Growth_Rate.'
+
+```{r}
+ggplot(covid19, aes(x=Lat, y=Avg_Growth_Rate)) +
+  geom_point()+
+  geom_smooth(method=lm, color='Orange', se=FALSE) +
+  xlab('Latitude')+
+  ylab('Average Growth Rate')
+```
+
+```{r}
+ggplot(covid19, aes(x=Long, y=Avg_Growth_Rate)) +
+  geom_point()+
+  geom_smooth(method=lm, color='Blue', se=FALSE) +
+  xlab('Longitude')+
+  ylab('Average Growth Rate')
+```
+
+```{r}
+ggplot(covid19, aes(x=Avg_Yearly_TempF, y=Avg_Growth_Rate)) +
+  geom_point()+
+  geom_smooth(method=lm, color='Red', se=FALSE) +
+  xlab('Average Yearly Temperature')+
+  ylab('Average Growth Rate')
+```
+
+At first glance, there does not appear to be any correlation between the individual features and the Average Growth Rate, with Latitude having almost zero correlation.
+
+```{r}
+lmodel <- lm(Avg_Growth_Rate ~ Lat + Long + Avg_Yearly_TempF, data = covid19)
+summary(lmodel)
+```
+
+As the graphs described, none of the features are useful predictors of Avg_Growth_Rate.  However, the predictor with the lowest P value (best predictor) was average yearly temperature.  Higher yearly temperatures were slightly correlated with lower average growth rates.
+
+### Modeling
+
+It is unlikely that any model using these features will produce an accurate model, but we can see if a Random Forest model will produce something useful.  We start by splitting the data into train and test sets.
+
+```{r}
+X <- covid19 %>%
+  select(c('Lat', 'Long', 'Avg_Yearly_TempF'))
+y <- covid19$Avg_Growth_Rate
+```
+
+```{r}
+set.seed(122)
+spl = sample.split(y, 0.7)
+train = subset(X, spl == TRUE)
+test = subset(X, spl == FALSE)
+ytrain <- subset(y, spl == TRUE)
+ytest <- subset(y, spl == FALSE)
+```
+
+We can now train the Random Forest model using our selected features.
+
+```{r}
+rf <- randomForest(ytrain ~ ., data=train, ntree=100)
+```
+
+```{r}
+rss <- sum((predict(rf, test) - ytest) ^ 2)  ## residual sum of squares
+tss <- sum((ytest - mean(ytest)) ^ 2)  ## total sum of squares
+r2 <- 1 - rss/tss
+```
+
+```{r}
+pred_frame <- data.frame(x = ytest, y = predict(rf, test))
+
+ggplot(pred_frame, aes(x=x, y=y)) +
+  geom_point() +
+  geom_abline(slope=1, intercept = 0, color="red") +
+	ggtitle(paste("RandomForest Regression in R    r^2=", r2, sep="")) +
+  xlab('Actual Avg Growth Rates') +
+  ylab('Predicted Avg Growth Rates')
+```
+
+Data points near the red line represent predictions that were close to the actual average growth rate for that country.  From this graph and the r-squared value we can see that the model performed very poorly.  There is not much that can be done to improve the model, the problem is the features we have are simply not good predictors of the average growth rate of coronavirus cases.
+
+### Conclusion
+
+While the model performed very poorly at predicting the average growth rate of coronavirus cases, it is not a failure.  It confirmed that Latitude, Longitude, and Average Yearly Temperature do not have much of an impact on the spread of the virus at all.  There are definitely limitations to this model, because not all countries are doing the same things.  Some are practicing much more strict social distancing measures, some have better testing capacities, and some have a larger elderly population.  Those are all features that this model cannot account for, and those are likely much better predictors of average growth rate.  If we look at the impact of average yearly temperature alone, there is a slight negative correlation, but you can look at Brazil and see that it has the 12th highest average yearly temperature and a growth rate of 17934.19 % over the last 63 days, leaving them with 146,894 cases currently. It seems safe to say that higher temperatures in the summer months will not provide relief, improving testing capacities and continuing to social distance are much more likely to. 
+
+### References 
+
+https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv
+
+https://en.wikipedia.org/wiki/List_of_countries_by_average_yearly_temperature
